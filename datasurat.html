@@ -209,6 +209,14 @@
 
   async function addData() {
     const noSurat = document.getElementById('noSurat').value.toString();
+    const inputElement = document.getElementById('noSurat');
+    let noSurat = inputElement.value.trim();
+    
+    // Cek apakah input hanya angka dan diawali dengan nol
+    if (/^0\d+$/.test(noSurat)) {
+      noSurat = `'${noSurat}`; // Tambahkan tanda petik satu di depan
+    }
+    console.log(noSurat);
     const tglSurat = document.getElementById('tglSurat').value.toString();
     const penandatangan = document.getElementById('penandatangan').value.toString();
     const jabatan = document.getElementById('jabatan').value.toString();
