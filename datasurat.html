@@ -131,85 +131,68 @@
     modal.classList.remove('hidden');
     modalTitle.textContent = isEdit ? 'Edit Data Surat' : 'Tambah Data Surat';
     saveBtn.textContent = isEdit ? 'Perbarui' : 'Simpan';
+    saveBtn.disabled = false;
   }
 
   function closeModal() {
     modal.classList.add('hidden');
-    document.querySelectorAll('#dataModal input').forEach(input => input.value = '');
+    document.querySelectorAll('#dataModal input').forEach(input => {
+      input.value = '';
+      input.classList.remove('border-red-500'); // Reset validasi input
+    });
     saveBtn.onclick = addData;
     editingRow = null;
   }
 
   function isRowEmpty(row) {
-    // Cek jika semua kolom kosong kecuali indeks 0 (biasanya ID atau row number)
     return row.slice(1).every(cell => !cell || cell.trim() === "");
-  }
-
-  async function fetchData() {
-    const res = await fetch(`${API_URL}?action=read`);
-    const data = await res.json();
-    const tbody = document.getElementById('dataTable');
-    tbody.innerHTML = '';
-
-    let rowNumber = 1;
-    data.slice(1).forEach((row, i) => {
-      if (isRowEmpty(row)) return; // Lewati baris kosong
-
-      const tr = document.createElement('tr');
-      tr.className = i % 2 === 0 ? 'bg-white' : 'bg-blue-50';
-      tr.innerHTML = `
-      <td class="px-4 py-2">${rowNumber++}</td>
-      <td class="px-4 py-2">${row[1]}</td>
-      <td class="px-4 py-2">${row[2]}</td>
-      <td class="px-4 py-2">${row[3]}</td>
-      <td class="px-4 py-2">${row[4]}</td>
-      <td class="px-4 py-2">${row[5]}</td>
-      <td class="px-4 py-2">${row[6]}</td>
-      <td class="px-4 py-2 text-center">
-        <a href="${row[7]}" class="text-blue-500" target="_blank" title="Lihat">
-          <span class="material-icons">link</span>
-        </a>
-      </td>
-      
-      <!-- Tombol QR Code -->
-        <td class="px-4 py-2 text-center">
-          <button onclick="showQRCodePopup('${row[8]}')" title="Lihat QR Code">
-            <span class="material-icons text-blue-500">qr_code</span>
-          </button>
-        </td>
-        
-      <td class="px-4 py-2 text-center">
-        <div class="flex items-center justify-center gap-2">
-          <button onclick='editData(${i + 1}, ${JSON.stringify(row).replace(/"/g, "&quot;")})'title="Edit">
-            <span class="material-icons text-blue-500">edit_note</span>
-          </button>
-          <button onclick="deleteData(${i + 1})"title="Hapus">
-            <span class="material-icons text-blue-500">delete_outline</span>
-          </button>
-        </div>
-      </td>
-    `;
-
-      tbody.appendChild(tr);
-    });
   }
 
   function getInputValues() {
     return [
       '',
-      document.getElementById('noSurat').value,
-      document.getElementById('tglSurat').value,
-      document.getElementById('penandatangan').value,
-      document.getElementById('jabatan').value,
-      document.getElementById('perihal').value,
-      document.getElementById('unitKerja').value,
-      document.getElementById('linkPdf').value
+      document.getElementById('noSurat').value.trim(),
+      document.getElementById('tglSurat').value.trim(),
+      document.getElementById('penandatangan').value.trim(),
+      document.getElementById('jabatan').value.trim(),
+      document.getElementById('perihal').value.trim(),
+      document.getElementById('unitKerja').value.trim(),
+      document.getElementById('linkPdf').value.trim()
     ];
   }
 
+  function validateInputs() {
+    let isValid = true;
+    document.querySelectorAll('#dataModal input').forEach(input => {
+      if (!input.value.trim()) {
+        input.classList.add('border-red-500');
+        isValid = false;
+      } else {
+        input.classList.remove('border-red-500');
+      }
+    });
+    return isValid;
+  }
+
   async function addData() {
+    if (!validateInputs()) {
+      Swal.fire('Lengkapi Data', 'Mohon isi semua kolom.', 'warning');
+      return;
+    }
+
+    const confirmed = await Swal.fire({
+      title: 'Simpan Data?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Simpan',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!confirmed.isConfirmed) return;
+
     const data = getInputValues();
-    Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = `<span class="material-icons animate-spin">autorenew</span> Menyimpan...`; // Loading indicator
 
     try {
       await fetch(`${API_URL}?action=create`, {
@@ -221,6 +204,9 @@
       fetchData();
     } catch {
       Swal.fire('Gagal', 'Terjadi kesalahan saat menambah data.', 'error');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Simpan';
     }
   }
 
@@ -228,13 +214,36 @@
     editingRow = row;
     const inputs = document.querySelectorAll('#dataModal input');
     [1, 2, 3, 4, 5, 6, 7].forEach((i, idx) => inputs[idx].value = data[i]);
+
+    const rows = document.getElementById("dataTable").getElementsByTagName("tr");
+    Array.from(rows).forEach(r => r.classList.remove('ring-2', 'ring-blue-400')); // reset highlight
+    if (rows[row - 1]) {
+      rows[row - 1].classList.add('ring-2', 'ring-blue-400'); // highlight baris yang sedang diedit
+    }
+
     openModal(true);
     saveBtn.onclick = () => updateData(row);
   }
 
   async function updateData(row) {
+    if (!validateInputs()) {
+      Swal.fire('Lengkapi Data', 'Mohon isi semua kolom.', 'warning');
+      return;
+    }
+
+    const confirmed = await Swal.fire({
+      title: 'Perbarui Data?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Perbarui',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!confirmed.isConfirmed) return;
+
     const values = getInputValues();
-    Swal.fire({ title: 'Memperbarui...', didOpen: () => Swal.showLoading() });
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = `<span class="material-icons animate-spin">autorenew</span> Memperbarui...`;
 
     try {
       await fetch(`${API_URL}?action=update`, {
@@ -246,6 +255,9 @@
       fetchData();
     } catch {
       Swal.fire('Gagal', 'Terjadi kesalahan saat memperbarui data.', 'error');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Perbarui';
     }
   }
 
@@ -283,7 +295,7 @@
   }
 
   window.onload = fetchData;
-  
+
   function showQRCodePopup(imageUrl) {
     document.getElementById("qrImage").src = imageUrl;
     document.getElementById("qrPopup").classList.remove("hidden");
@@ -301,137 +313,34 @@
       await navigator.clipboard.write([
         new ClipboardItem({ [blob.type]: blob })
       ]);
-
-      // Ganti alert dengan SweetAlert sukses
-      Swal.fire({
-        icon: 'success',
-        title: 'Berhasil!',
-        text: 'Gambar QR Code berhasil disalin!',
-        timer: 1500,
-        showConfirmButton: false
-      });
+      Swal.fire({ icon: 'success', title: 'Berhasil!', text: 'Gambar QR Code berhasil disalin!', timer: 1500, showConfirmButton: false });
     } catch (err) {
-      // Ganti alert dengan SweetAlert error
-      Swal.fire({
-        icon: 'error',
-        title: 'Oops!',
-        text: 'Gagal menyalin gambar. Browser tidak mendukung.',
-      });
+      Swal.fire({ icon: 'error', title: 'Oops!', text: 'Gagal menyalin gambar. Browser tidak mendukung.' });
     }
   }
-  
+
   async function refreshData() {
-  const refreshBtn = document.querySelector('button[onclick="refreshData()"]');
-  const loadingIndicator = document.getElementById("loadingIndicator");
-  const tableBody = document.getElementById("dataTable");
+    const refreshBtn = document.querySelector('button[onclick="refreshData()"]');
+    const loadingIndicator = document.getElementById("loadingIndicator");
+    const tableBody = document.getElementById("dataTable");
 
-  // Ubah tombol dan tampilkan loading
-  refreshBtn.disabled = true;
-  refreshBtn.innerHTML = `<span class="material-icons animate-spin">autorenew</span> Memuat...`;
-  loadingIndicator.classList.remove("hidden");
-  tableBody.parentElement.classList.add("hidden"); // Sembunyikan tabel
+    refreshBtn.disabled = true;
+    refreshBtn.innerHTML = `<span class="material-icons animate-spin">autorenew</span> Memuat...`;
+    loadingIndicator.classList.remove("hidden");
+    tableBody.parentElement.classList.add("hidden");
 
-  try {
-    await fetchData(); // Panggil ulang fetchData()
-  } catch (error) {
-    console.error("Gagal memuat data:", error);
-    Swal.fire("Gagal!", "Data tidak dapat dimuat.", "error");
-  } finally {
-    // Sembunyikan loading, kembalikan tombol dan tampilkan tabel
-    refreshBtn.disabled = false;
-    refreshBtn.innerHTML = "Refresh";
-    loadingIndicator.classList.add("hidden");
-    tableBody.parentElement.classList.remove("hidden");
-  }
-}
-
-</script>
-
-<!-- Tambahkan sebelum tag penutup </body> -->
-<script>
-  const ITEMS_PER_PAGE = 10;
-  let currentPage = 1;
-  let allData = [];
-
-  async function fetchData() {
-    const res = await fetch(`${API_URL}?action=read`);
-    const data = await res.json();
-    allData = data.slice(1).filter(row => !isRowEmpty(row));
-    renderTable();
-    renderPagination();
-  }
-
-  function renderTable() {
-    const tbody = document.getElementById('dataTable');
-    tbody.innerHTML = '';
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    const end = start + ITEMS_PER_PAGE;
-    const pageData = allData.slice(start, end);
-
-    let rowNumber = start + 1;
-    pageData.forEach((row, i) => {
-      const tr = document.createElement('tr');
-      tr.className = i % 2 === 0 ? 'bg-white' : 'bg-blue-50';
-      tr.innerHTML = `
-        <td class="px-4 py-2">${rowNumber++}</td>
-        <td class="px-4 py-2">${row[1]}</td>
-        <td class="px-4 py-2">${row[2]}</td>
-        <td class="px-4 py-2">${row[3]}</td>
-        <td class="px-4 py-2">${row[4]}</td>
-        <td class="px-4 py-2">${row[5]}</td>
-        <td class="px-4 py-2">${row[6]}</td>
-        <td class="px-4 py-2 text-center">
-          <a href="${row[7]}" class="text-blue-500" target="_blank" title="Lihat">
-            <span class="material-icons">link</span>
-          </a>
-        </td>
-        <td class="px-4 py-2 text-center">
-          <button onclick="showQRCodePopup('${row[8]}')" title="Lihat QR Code">
-            <span class="material-icons text-blue-500">qr_code</span>
-          </button>
-        </td>
-        <td class="px-4 py-2 text-center">
-          <div class="flex items-center justify-center gap-2">
-            <button onclick='editData(${start + i + 1}, ${JSON.stringify(row).replace(/"/g, "&quot;")})' title="Edit">
-              <span class="material-icons text-blue-500">edit_note</span>
-            </button>
-            <button onclick="deleteData(${start + i + 1})" title="Hapus">
-              <span class="material-icons text-blue-500">delete_outline</span>
-            </button>
-          </div>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
-
-  function renderPagination() {
-    let paginationContainer = document.getElementById('pagination');
-    if (!paginationContainer) {
-      paginationContainer = document.createElement('div');
-      paginationContainer.id = 'pagination';
-      paginationContainer.className = 'mt-4 flex justify-center gap-2';
-      document.querySelector('.max-w-7xl').appendChild(paginationContainer);
-    }
-    paginationContainer.innerHTML = '';
-
-    const totalPages = Math.ceil(allData.length / ITEMS_PER_PAGE);
-
-    for (let i = 1; i <= totalPages; i++) {
-      const btn = document.createElement('button');
-      btn.className = `px-3 py-1 rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`;
-      btn.textContent = i;
-      btn.onclick = () => {
-        currentPage = i;
-        renderTable();
-        renderPagination();
-      };
-      paginationContainer.appendChild(btn);
+    try {
+      await fetchData();
+    } catch (error) {
+      console.error("Gagal memuat data:", error);
+      Swal.fire("Gagal!", "Data tidak dapat dimuat.", "error");
+    } finally {
+      refreshBtn.disabled = false;
+      refreshBtn.innerHTML = "Refresh";
+      loadingIndicator.classList.add("hidden");
+      tableBody.parentElement.classList.remove("hidden");
     }
   }
-
-  // Panggil saat dokumen siap
-  window.onload = fetchData;
 </script>
 
 </body>
