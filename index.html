@@ -222,7 +222,7 @@
   hasil.style.display = "block"; // ✅ tampilkan container hasil
   hasil.innerHTML = "<p>🔄 Memuat data...</p>";
 
-  fetch("https://docs.google.com/spreadsheets/d/1tQDN23nfzcbOHOPBg_b43CrR_N4hJ5ex6IjmBLG0e7w/gviz/tq?tqx=out:json")
+  fetch("https://docs.google.com/spreadsheets/d/1tlJxMJ8QapoErQMf00UjPUDPjgHY5tOtbnH_X9BLXaI/gviz/tq?tqx=out:json")
     .then(res => res.text())
     .then(text => {
       const json = JSON.parse(text.substring(47).slice(0, -2));
