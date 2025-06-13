@@ -208,19 +208,35 @@
   }
 
   async function addData() {
-    const data = getInputValues();
-    Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
+    const noSurat = document.getElementById('noSurat').value.toString();
+    const tglSurat = document.getElementById('tglSurat').value.toString();
+    const penandatangan = document.getElementById('penandatangan').value.toString();
+    const jabatan = document.getElementById('jabatan').value.toString();
+    const perihal = document.getElementById('perihal').value.toString();
+    const unitKerja = document.getElementById('unitKerja').value.toString();
+    const linkPdf = document.getElementById('linkPdf').value.toString();
 
-    try {
-      await fetch(`${API_URL}?action=create`, {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
+    const response = await fetch(`${API_URL}?action=create`, {
+      method: 'POST',
+      body: JSON.stringify({
+        noSurat,
+        tglSurat,
+        penandatangan,
+        jabatan,
+        perihal,
+        unitKerja,
+        linkPdf
+      }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+    if (result.success) {
       Swal.fire('Berhasil!', 'Data berhasil ditambahkan.', 'success');
       closeModal();
       fetchData();
-    } catch {
-      Swal.fire('Gagal', 'Terjadi kesalahan saat menambah data.', 'error');
+    } else {
+      Swal.fire('Gagal!', 'Terjadi kesalahan saat menyimpan data.', 'error');
     }
   }
 
