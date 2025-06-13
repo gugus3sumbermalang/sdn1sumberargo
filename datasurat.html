@@ -341,27 +341,6 @@
       tableBody.parentElement.classList.remove("hidden");
     }
   }
-
-  // Fungsi getInputValues (tempatkan di bagian atas atau bawah script Anda)
-function getInputValues() {
-  return [
-    '',
-    String(document.getElementById('noSurat').value.trim()),
-    document.getElementById('tglSurat').value.trim(),
-    document.getElementById('penandatangan').value.trim(),
-    document.getElementById('jabatan').value.trim(),
-    document.getElementById('perihal').value.trim(),
-    document.getElementById('unitKerja').value.trim(),
-    document.getElementById('linkPdf').value.trim()
-  ];
-}
-
-// Event listener tombol
-document.getElementById('btnTambah').addEventListener('click', function() {
-  const data = getInputValues();
-  console.log(data); // atau bisa digunakan untuk insert ke tabel
-});
-
 </script>
 
 </body>
